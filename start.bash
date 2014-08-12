@@ -3,40 +3,27 @@
 #
 # start.bash
 #
-
-GHOST="/ghost"
-OVERRIDE="/ghost-override"
-
-CONFIG="config.js"
-DATA="content/data"
-IMAGES="content/images"
-THEMES="content/themes"
+. /ghost-common
 
 cd "$GHOST"
 
-# Symlink data directory.
-mkdir -p "$OVERRIDE/$DATA"
-rm -fr "$DATA"
-ln -s "$OVERRIDE/$DATA" "content"
+mkdir -p "$OVERRIDE/$DATA" "$OVERRIDE/$IMAGES" "$OVERRIDE/$THEMES"
 
-# Symlink images directory
-mkdir -p "$OVERRIDE/$IMAGES"
-rm -fr "$IMAGES"
-ln -s "$OVERRIDE/$IMAGES" "$IMAGES"
-
-# Symlink config file.
-if [[ -f "$OVERRIDE/$CONFIG" ]]; then
-  rm -f "$CONFIG"
-  ln -s "$OVERRIDE/$CONFIG" "$CONFIG"
+if [[ ! -f "$OVERRIDE/$CONFIG" ]]; then
+    cp "${CONFIG}.orig" "$OVERRIDE/$CONFIG"
 fi
 
-# Symlink themes.
-if [[ -d "$OVERRIDE/$THEMES" ]]; then
-  for theme in $(find "$OVERRIDE/$THEMES" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-  do
-    rm -fr "$THEMES/$theme"
-    ln -s "$OVERRIDE/$THEMES/$theme" "$THEMES/$theme"
-  done
-fi
+for theme in $(find "${THEMES}.orig" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+do
+    if [[ ! -d "$OVERRIDE/$THEMES/$theme" ]]
+    then
+	cp -ar "${THEMES}.orig/$theme" "$OVERRIDE/$THEMES"
+    fi
+done
 
-npm start
+groupmod -g "$GHOST_GID" "$GHOST_GROUP"
+usermod -u  "$GHOST_UID" "$GHOST_USER"
+
+chown -R "$GHOST_USER":"$GHOST_GROUP" "$OVERRIDE"
+
+exec su "$GHOST_USER" -c "exec npm start"
